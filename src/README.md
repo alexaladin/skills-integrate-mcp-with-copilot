@@ -35,10 +35,21 @@ A super simple FastAPI application that allows students to view and sign up for 
 
 ## API Endpoints
 
-| Method | Endpoint                                                          | Description                                                         |
-| ------ | ----------------------------------------------------------------- | ------------------------------------------------------------------- |
-| GET    | `/activities`                                                     | Get all activities with their details and current participant count |
-| POST   | `/activities/{activity_name}/signup?email=student@mergington.edu` | Sign up for an activity                                             |
+### Authentication (Admin)
+
+| Method | Endpoint       | Description                                                                                 |
+| ------ | -------------- | ------------------------------------------------------------------------------------------- |
+| POST   | `/auth/login`  | Authenticate as a teacher; returns an `X-Admin-Token` for use in protected endpoints        |
+| POST   | `/auth/logout` | Invalidate the current admin token (requires `X-Admin-Token` header)                        |
+| GET    | `/auth/status` | Check whether an admin token is currently valid (requires `X-Admin-Token` header)           |
+
+### Activities
+
+| Method | Endpoint                                                          | Description                                                                        |
+| ------ | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| GET    | `/activities`                                                     | Get all activities with their details and current participant count                |
+| POST   | `/activities/{activity_name}/signup?email=student@mergington.edu` | Sign up a student for an activity (requires `X-Admin-Token` header)                |
+| DELETE | `/activities/{activity_name}/unregister?email=student@mergington.edu` | Remove a student from an activity (requires `X-Admin-Token` header)            |
 
 ## Data Model
 
