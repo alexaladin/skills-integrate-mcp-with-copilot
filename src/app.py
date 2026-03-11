@@ -145,13 +145,12 @@ def require_admin_token(admin_token: str | None) -> str:
     """Validate admin token and return the associated username."""
     cleanup_expired_sessions()
 
-    if not admin_token or admin_token not in active_admin_sessions:
+    session = active_admin_sessions.get(admin_token) if admin_token else None
+    if not admin_token or session is None:
         raise HTTPException(
             status_code=401,
             detail="Admin authentication required"
         )
-
-    session = active_admin_sessions[admin_token]
     return str(session["username"])
 
 
