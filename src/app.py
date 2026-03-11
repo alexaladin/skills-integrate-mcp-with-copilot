@@ -46,8 +46,9 @@ def load_teacher_credentials() -> dict[str, str]:
     if not teachers_path.exists():
         logger.warning(
             "teachers.json not found. "
-            "Admin login is disabled until the file is created. "
-            "See teachers.example.json for the expected format."
+            "Admin login is disabled because no teacher credentials are loaded. "
+            "Create teachers.json (see teachers.example.json for the expected format) "
+            "and restart the server to enable admin login."
         )
         return {}
 
