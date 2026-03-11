@@ -37,7 +37,7 @@ app.mount("/static", StaticFiles(directory=os.path.join(Path(__file__).parent,
 def load_teacher_credentials() -> dict[str, str]:
     """Load teacher credentials from teachers.json.
 
-    Returns an empty dict and prints a warning if the file is absent or
+    Returns an empty dict and logs a warning if the file is absent or
     unreadable.  The example credentials file is intentionally never used as a
     fallback so that default/example passwords cannot be accepted in production.
     """
