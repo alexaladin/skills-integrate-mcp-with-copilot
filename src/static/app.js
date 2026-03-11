@@ -10,8 +10,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const closeModalBtn = document.getElementById("close-modal-btn");
   const logoutBtn = document.getElementById("logout-btn");
 
-  let adminToken = localStorage.getItem("adminToken") || null;
-  let adminUsername = localStorage.getItem("adminUsername") || null;
+  let adminToken = sessionStorage.getItem("adminToken") || null;
+  let adminUsername = sessionStorage.getItem("adminUsername") || null;
 
   function getAuthHeaders() {
     if (!adminToken) {
@@ -51,17 +51,17 @@ document.addEventListener("DOMContentLoaded", () => {
       const result = await response.json();
 
       if (!result.authenticated) {
-        localStorage.removeItem("adminToken");
-        localStorage.removeItem("adminUsername");
+        sessionStorage.removeItem("adminToken");
+        sessionStorage.removeItem("adminUsername");
         adminToken = null;
         adminUsername = null;
       } else {
         adminUsername = result.username;
-        localStorage.setItem("adminUsername", adminUsername);
+        sessionStorage.setItem("adminUsername", adminUsername);
       }
     } catch (error) {
-      localStorage.removeItem("adminToken");
-      localStorage.removeItem("adminUsername");
+      sessionStorage.removeItem("adminToken");
+      sessionStorage.removeItem("adminUsername");
       adminToken = null;
       adminUsername = null;
     }
@@ -246,8 +246,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       adminToken = result.token;
       adminUsername = result.username;
-      localStorage.setItem("adminToken", adminToken);
-      localStorage.setItem("adminUsername", adminUsername);
+      sessionStorage.setItem("adminToken", adminToken);
+      sessionStorage.setItem("adminUsername", adminUsername);
       updateAuthView();
       setMessage(`Logged in as ${adminUsername}`, "success");
       loginForm.reset();
@@ -275,8 +275,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     adminToken = null;
     adminUsername = null;
-    localStorage.removeItem("adminToken");
-    localStorage.removeItem("adminUsername");
+    sessionStorage.removeItem("adminToken");
+    sessionStorage.removeItem("adminUsername");
     updateAuthView();
     setMessage("Logged out", "success");
     fetchActivities();

@@ -11,11 +11,14 @@ from fastapi.responses import RedirectResponse
 import os
 import json
 import secrets
+import time
 from pathlib import Path
 from pydantic import BaseModel
 
 app = FastAPI(title="Mergington High School API",
               description="API for viewing and signing up for extracurricular activities")
+
+ADMIN_SESSION_TTL_SECONDS = 60 * 60 * 8
 
 
 class LoginRequest(BaseModel):
@@ -30,12 +33,18 @@ app.mount("/static", StaticFiles(directory=os.path.join(Path(__file__).parent,
 
 def load_teacher_credentials() -> dict[str, str]:
     """Load teacher credentials from a local JSON file."""
-    teachers_path = current_dir / "teachers.json"
+    primary_path = current_dir / "teachers.json"
+    fallback_path = current_dir / "teachers.example.json"
+
+    teachers_path = primary_path if primary_path.exists() else fallback_path
     if not teachers_path.exists():
         return {}
 
-    with open(teachers_path, "r", encoding="utf-8") as f:
-        raw_data = json.load(f)
+    try:
+        with open(teachers_path, "r", encoding="utf-8") as f:
+            raw_data = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return {}
 
     teachers = raw_data.get("teachers", [])
     return {
@@ -47,8 +56,8 @@ def load_teacher_credentials() -> dict[str, str]:
 
 teacher_credentials = load_teacher_credentials()
 
-# In-memory admin sessions. This will reset on server restart.
-active_admin_sessions: dict[str, str] = {}
+# In-memory admin sessions with expiry. This will reset on server restart.
+active_admin_sessions: dict[str, dict[str, float | str]] = {}
 
 # In-memory activity database
 activities = {
@@ -109,14 +118,29 @@ activities = {
 }
 
 
+def cleanup_expired_sessions() -> None:
+    """Remove expired sessions to avoid unbounded growth."""
+    now = time.time()
+    expired_tokens = [
+        token for token, session in active_admin_sessions.items()
+        if float(session.get("expires_at", 0)) <= now
+    ]
+    for token in expired_tokens:
+        active_admin_sessions.pop(token, None)
+
+
 def require_admin_token(admin_token: str | None) -> str:
     """Validate admin token and return the associated username."""
+    cleanup_expired_sessions()
+
     if not admin_token or admin_token not in active_admin_sessions:
         raise HTTPException(
             status_code=401,
             detail="Admin authentication required"
         )
-    return active_admin_sessions[admin_token]
+
+    session = active_admin_sessions[admin_token]
+    return str(session["username"])
 
 
 @app.get("/")
@@ -133,11 +157,16 @@ def get_activities():
 def login(payload: LoginRequest):
     """Authenticate a teacher and create an admin session token."""
     expected_password = teacher_credentials.get(payload.username)
-    if not expected_password or payload.password != expected_password:
+    if expected_password is None or not secrets.compare_digest(payload.password, expected_password):
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
+    cleanup_expired_sessions()
+
     token = secrets.token_urlsafe(24)
-    active_admin_sessions[token] = payload.username
+    active_admin_sessions[token] = {
+        "username": payload.username,
+        "expires_at": time.time() + ADMIN_SESSION_TTL_SECONDS,
+    }
     return {"token": token, "username": payload.username}
 
 
@@ -152,16 +181,18 @@ def logout(admin_token: str | None = Header(default=None, alias="X-Admin-Token")
 @app.get("/auth/status")
 def auth_status(admin_token: str | None = Header(default=None, alias="X-Admin-Token")):
     """Check whether an admin token is currently valid."""
+    cleanup_expired_sessions()
+
     if not admin_token:
         return {"authenticated": False}
 
-    username = active_admin_sessions.get(admin_token)
-    if not username:
+    session = active_admin_sessions.get(admin_token)
+    if not session:
         return {"authenticated": False}
 
     return {
         "authenticated": True,
-        "username": username
+        "username": session["username"]
     }
 
 
