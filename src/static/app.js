@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let adminToken = sessionStorage.getItem("adminToken") || null;
   let adminUsername = sessionStorage.getItem("adminUsername") || null;
+  let messageTimeout = null;
 
   function getAuthHeaders() {
     if (!adminToken) {
@@ -25,7 +26,8 @@ document.addEventListener("DOMContentLoaded", () => {
     messageDiv.className = `message ${type}`;
     messageDiv.classList.remove("hidden");
 
-    setTimeout(() => {
+    clearTimeout(messageTimeout);
+    messageTimeout = setTimeout(() => {
       messageDiv.classList.add("hidden");
     }, 5000);
   }
