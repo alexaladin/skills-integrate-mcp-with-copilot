@@ -8,6 +8,7 @@ for extracurricular activities at Mergington High School.
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
+import logging
 import os
 import json
 import secrets
@@ -17,6 +18,8 @@ from pydantic import BaseModel
 
 app = FastAPI(title="Mergington High School API",
               description="API for viewing and signing up for extracurricular activities")
+
+logger = logging.getLogger(__name__)
 
 ADMIN_SESSION_TTL_SECONDS = 60 * 60 * 8
 
@@ -32,18 +35,27 @@ app.mount("/static", StaticFiles(directory=os.path.join(Path(__file__).parent,
 
 
 def load_teacher_credentials() -> dict[str, str]:
-    """Load teacher credentials from a local JSON file."""
-    primary_path = current_dir / "teachers.json"
-    fallback_path = current_dir / "teachers.example.json"
+    """Load teacher credentials from teachers.json.
 
-    teachers_path = primary_path if primary_path.exists() else fallback_path
+    Returns an empty dict and prints a warning if the file is absent or
+    unreadable.  The example credentials file is intentionally never used as a
+    fallback so that default/example passwords cannot be accepted in production.
+    """
+    teachers_path = current_dir / "teachers.json"
+
     if not teachers_path.exists():
+        logger.warning(
+            "teachers.json not found. "
+            "Admin login is disabled until the file is created. "
+            "See teachers.example.json for the expected format."
+        )
         return {}
 
     try:
         with open(teachers_path, "r", encoding="utf-8") as f:
             raw_data = json.load(f)
-    except (OSError, json.JSONDecodeError):
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("Could not load teachers.json: %s. Admin login is disabled.", exc)
         return {}
 
     teachers = raw_data.get("teachers", [])
