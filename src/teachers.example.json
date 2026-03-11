@@ -1,0 +1,12 @@
+{
+  "teachers": [
+    {
+      "username": "example_teacher1",
+      "password": "example_password_1"
+    },
+    {
+      "username": "example_teacher2",
+      "password": "example_password_2"
+    }
+  ]
+}
