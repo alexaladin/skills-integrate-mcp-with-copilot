@@ -59,14 +59,39 @@ def load_teacher_credentials() -> dict[str, str]:
         logger.warning("Could not load teachers.json: %s. Admin login is disabled.", exc)
         return {}
 
+    if not isinstance(raw_data, dict):
+        logger.warning(
+            "Invalid teachers.json format: top-level JSON value must be an object with a 'teachers' key."
+        )
+        return {}
+
     teachers = raw_data.get("teachers", [])
-    return {
-        teacher["username"]: teacher["password"]
-        for teacher in teachers
-        if "username" in teacher and "password" in teacher
-    }
+    if not isinstance(teachers, list):
+        logger.warning(
+            "Invalid teachers.json format: 'teachers' must be a list."
+        )
+        return {}
 
+    valid_teachers: dict[str, str] = {}
+    for teacher in teachers:
+        if not isinstance(teacher, dict):
+            logger.warning(
+                "Skipping invalid teacher entry in teachers.json: expected object, got %s",
+                type(teacher).__name__,
+            )
+            continue
 
+        username = teacher.get("username")
+        password = teacher.get("password")
+        if not isinstance(username, str) or not isinstance(password, str):
+            logger.warning(
+                "Skipping teacher entry with non-string username or password in teachers.json."
+            )
+            continue
+
+        valid_teachers[username] = password
+
+    return valid_teachers
 teacher_credentials = load_teacher_credentials()
 
 # In-memory admin sessions with expiry. This will reset on server restart.
